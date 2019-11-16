@@ -40,6 +40,8 @@ LEARNING_RATE = 1e-4
 RUNNING_OBSERVATION = 999999999
 SAVING_FREQ = 300
 NUM_ACTIONS = 2
+RUNNING_MODEL_FILE = "model74200.h5"
+TRAINING_MODEL_FILE = None
 
 img_rows , img_cols = 80, 80
 #Convert image into Black and white
@@ -102,16 +104,20 @@ def trainNetwork(model,args):
 
     print(args["mode"])
     if args['mode'] == 'Run':
+        print("Running mode")
         OBSERVE = RUNNING_OBSERVATION    #We keep observe, never train
         epsilon = FINAL_EPSILON
         print ("Loading from trained model")
-        model.load_weights("model94200.h5")
+        model.load_weights(RUNNING_MODEL_FILE)
         adam = Adam(lr=LEARNING_RATE)
         model.compile(loss='mse',optimizer=adam)
         print ("Trained model load successfully")
     else:                       #We go to training mode
         print("Training mode")
-        model.load_weights("model.h5")
+        if TRAINING_MODEL_FILE:
+            model.load_weights(TRAINING_MODEL_FILE)
+        else: 
+            model = buildModel(NUM_ACTIONS)
         adam = Adam(lr=LEARNING_RATE)
         model.compile(loss='mse',optimizer=adam)
         print ("Trained model load successfully")
