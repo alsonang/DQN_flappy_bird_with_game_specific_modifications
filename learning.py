@@ -24,7 +24,7 @@ from keras.optimizers import SGD , Adam
 from keras import backend as K
 import tensorflow as tf
 
-
+# Parameter settings
 GAME = 'bird' # the name of the game being played for log files
 CONFIG = 'nothreshold'
 ACTIONS = 2 # number of valid actions
@@ -33,6 +33,7 @@ OBSERVATION = 3000. # timesteps to observe before training
 EXPLORE = 70000. # frames over which to anneal epsilon
 FINAL_EPSILON = 0.1 # final value of epsilon
 INITIAL_EPSILON = 0.9 # starting value of epsilon
+EPSILON_TRAIN = 0.9
 REPLAY_MEMORY = 10000 # number of previous transitions to remember
 BATCH = 32 # size of minibatch
 FRAME_PER_ACTION = 1
@@ -42,6 +43,13 @@ SAVING_FREQ = 340
 NUM_ACTIONS = 2
 RUNNING_MODEL_FILE = "model74200.h5"
 TRAINING_MODEL_FILE = None
+RANDOM_ACTION_FRAC = (7,1)
+
+def randomActionList(fraction):
+    random_action_list = [0]*RANDOM_ACTION_FRAC[0]
+    random_action_list.extend([1]*RANDOM_ACTION_FRAC[1])
+    return random_action_list
+
 
 img_rows , img_cols = 80, 80
 #Convert image into Black and white
@@ -130,7 +138,7 @@ def trainNetwork(model,args):
         r_t = 0
         a_t = np.zeros([ACTIONS])
         #choose an action epsilon greedy
-        random_action_list = [0,0,0,0,0,0,0,1]
+        random_action_list = randomActionList(RANDOM_ACTION_FRAC)
         if t % FRAME_PER_ACTION == 0:
             if random.random() <= epsilon:
                 print("----------Random Action----------")
@@ -144,7 +152,7 @@ def trainNetwork(model,args):
                 action_index = max_Q
                 a_t[max_Q] = 1
         if t>OBSERVE:
-            EPSILON_TRAIN = 0.9
+            
             epsilon = min(EPSILON_TRAIN,epsilon)
         #We reduced the epsilon gradually
         if epsilon > FINAL_EPSILON and t > OBSERVE:
