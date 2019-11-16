@@ -40,6 +40,8 @@ LEARNING_RATE = 1e-4
 RUNNING_OBSERVATION = 999999999
 SAVING_FREQ = 340
 NUM_ACTIONS = 2
+RUNNING_MODEL_FILE = "model74200.h5"
+TRAINING_MODEL_FILE = None
 
 img_rows , img_cols = 80, 80
 #Convert image into Black and white
@@ -51,18 +53,18 @@ def saveModel(model,t):
         json.dump(model.to_json(), outfile)
 
 def imageProcessing(image):
-
+    print("Image processing being performed")
     x_t1 = skimage.color.rgb2gray(image)
     x_t1 = skimage.transform.resize(x_t1, (80, 80))
     x_t1 = skimage.exposure.rescale_intensity(x_t1, out_range=(0, 255))
     x_t1/=255.0
-    print("***************dividing")
+    
     x_t1 = np.reshape(x_t1, (1, x_t1.shape[0], x_t1.shape[1], 1))
-    print("***************reshaping")
+    
     return x_t1 # 1x80x80x1
 
 def buildModel(num_actions):
-    print("Now we build the model")
+    print("Model being built")
     model = Sequential()
     model.add(Conv2D(32, kernel_size=(8, 8),  padding ='same',input_shape=(img_rows,img_cols,img_channels),activation="relu"))  #80*80*4
     model.add(Conv2D(64, kernel_size = (4, 4), padding='same',activation="relu"))
@@ -92,7 +94,6 @@ def trainNetwork(model,args):
     x_t = skimage.transform.resize(x_t,(80,80))
     print(x_t.shape)
     x_t = skimage.exposure.rescale_intensity(x_t,out_range=(0,255))
-    print(type(x_t),"**************************")
     x_t = x_t / 255.0
     s_t = np.stack((x_t, x_t, x_t, x_t), axis=2)
     #print (s_t.shape)
@@ -102,16 +103,20 @@ def trainNetwork(model,args):
 
     print(args["mode"])
     if args['mode'] == 'Run':
+        print("Running mode")
         OBSERVE = RUNNING_OBSERVATION    #We keep observe, never train
         epsilon = FINAL_EPSILON
         print ("Loading from trained model")
-        model.load_weights("model74100.h5")
+        model.load_weights(RUNNING_MODEL_FILE)
         adam = Adam(lr=LEARNING_RATE)
         model.compile(loss='mse',optimizer=adam)
         print ("Trained model load successfully")
     else:                       #We go to training mode
         print("Training mode")
-        model.load_weights("model5440.h5")
+        if TRAINING_MODEL_FILE:
+            model.load_weights(TRAINING_MODEL_FILE)
+        else: 
+            model = buildModel(NUM_ACTIONS)
         adam = Adam(lr=LEARNING_RATE)
         model.compile(loss='mse',optimizer=adam)
         print ("Trained model load successfully")
@@ -125,7 +130,7 @@ def trainNetwork(model,args):
         r_t = 0
         a_t = np.zeros([ACTIONS])
         #choose an action epsilon greedy
-        random_action_list = [0,0,0,0,0,0,0,1] # make it 5 to 1
+        random_action_list = [0,0,0,0,0,0,0,1]
         if t % FRAME_PER_ACTION == 0:
             if random.random() <= epsilon:
                 print("----------Random Action----------")
@@ -133,6 +138,7 @@ def trainNetwork(model,args):
                 action_index = random.choice(random_action_list)
                 a_t[action_index] = 1
             else:
+                print("----------Non-random Action----------")
                 q = model.predict(s_t)       #input a stack of 4 images, get the prediction
                 max_Q = np.argmax(q)
                 action_index = max_Q
@@ -142,7 +148,7 @@ def trainNetwork(model,args):
             epsilon = min(EPSILON_TRAIN,epsilon)
         #We reduced the epsilon gradually
         if epsilon > FINAL_EPSILON and t > OBSERVE:
-            epsilon -= (INITIAL_EPSILON - FINAL_EPSILON) / EXPLORE
+            epsilon -= (epsilon - FINAL_EPSILON) / EXPLORE
 
         #run the selected action and observed next state and reward
         x_t1_colored, r_t, terminal = game_state.frame_step(a_t)
@@ -184,7 +190,7 @@ def trainNetwork(model,args):
 
         print("TIMESTEP", t, "/ STATE", state, "/ EPSILON", epsilon, "/ ACTION", action_index,\
               "/ REWARD", r_t, "/ Q_MAX " , np.max(Q_sa), "/ Loss ", loss)
-    print("Episode finished!")
+    print("========Episode finished!========")
     print("************************")
 
 def playGame(args):
