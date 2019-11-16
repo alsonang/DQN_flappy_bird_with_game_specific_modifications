@@ -29,16 +29,16 @@ GAME = 'bird' # the name of the game being played for log files
 CONFIG = 'nothreshold'
 ACTIONS = 2 # number of valid actions
 GAMMA = 0.99 # decay rate of past observations
-OBSERVATION = 3000. # timesteps to observe before training
-EXPLORE = 70000. # frames over which to anneal epsilon
-FINAL_EPSILON = 0.1 # final value of epsilon
-INITIAL_EPSILON = 0.9 # starting value of epsilon
+OBSERVATION = 6400. # timesteps to observe before training
+EXPLORE = 1000000. # frames over which to anneal epsilon
+FINAL_EPSILON = 0.0001 # final value of epsilon
+INITIAL_EPSILON = 0.5 # starting value of epsilon
 REPLAY_MEMORY = 10000 # number of previous transitions to remember
 BATCH = 32 # size of minibatch
 FRAME_PER_ACTION = 1
 LEARNING_RATE = 1e-4
 RUNNING_OBSERVATION = 999999999
-SAVING_FREQ = 340
+SAVING_FREQ = 300
 NUM_ACTIONS = 2
 
 img_rows , img_cols = 80, 80
@@ -105,13 +105,13 @@ def trainNetwork(model,args):
         OBSERVE = RUNNING_OBSERVATION    #We keep observe, never train
         epsilon = FINAL_EPSILON
         print ("Loading from trained model")
-        model.load_weights("model74100.h5")
+        model.load_weights("model94200.h5")
         adam = Adam(lr=LEARNING_RATE)
         model.compile(loss='mse',optimizer=adam)
         print ("Trained model load successfully")
     else:                       #We go to training mode
         print("Training mode")
-        model.load_weights("model5440.h5")
+        model.load_weights("model.h5")
         adam = Adam(lr=LEARNING_RATE)
         model.compile(loss='mse',optimizer=adam)
         print ("Trained model load successfully")
@@ -125,7 +125,7 @@ def trainNetwork(model,args):
         r_t = 0
         a_t = np.zeros([ACTIONS])
         #choose an action epsilon greedy
-        random_action_list = [0,0,0,0,0,0,0,1] # make it 5 to 1
+        random_action_list = [0,0,0,0,0,0,0,0,1] # make it 7 to 1
         if t % FRAME_PER_ACTION == 0:
             if random.random() <= epsilon:
                 print("----------Random Action----------")
@@ -138,10 +138,10 @@ def trainNetwork(model,args):
                 action_index = max_Q
                 a_t[max_Q] = 1
         if t>OBSERVE:
-            EPSILON_TRAIN = 0.9
+            EPSILON_TRAIN = 0.8
             epsilon = min(EPSILON_TRAIN,epsilon)
         #We reduced the epsilon gradually
-        if epsilon > FINAL_EPSILON and t > OBSERVE:
+        if epsilon > FINAL_EPSILON and t > OBSERVE and t<=EXPLORE:
             epsilon -= (INITIAL_EPSILON - FINAL_EPSILON) / EXPLORE
 
         #run the selected action and observed next state and reward
@@ -171,7 +171,7 @@ def trainNetwork(model,args):
         t+=1
 
         # save progress every 10000 iterations
-        if t % SAVING_FREQ == 0:
+        if t % SAVING_FREQ == 0 and t>OBSERVE:
             saveModel(model,t)
         # print info
         state = ""
